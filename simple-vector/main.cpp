@@ -1,9 +1,6 @@
 #include "simple_vector.h"
-// Tests
-//#include "tests.h"
 
 #include <iostream>
-
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -196,7 +193,6 @@ void TestDefaultConstructor() {
 }
 
 // Previous tests
-
 inline void Test1() {
 	// Инициализация конструктором по умолчанию
 	{
@@ -257,7 +253,7 @@ inline void Test1() {
 		assert(v.GetCapacity() == old_capacity);
 	}
 	
-	//    // Изменение размера
+	// Изменение размера
 	{
 		SimpleVector<int> v(3);
 		v[2] = 17;
@@ -281,16 +277,10 @@ inline void Test1() {
 	{
 		const size_t old_size = 3;
 		SimpleVector<int> v(3);
-		//		v.PrintArr(v);
 		v.Resize(old_size + 5);
-		//		v.PrintArr(v);
 		v[3] = 42;
-		//		v.PrintArr(v);
 		v.Resize(old_size);
-		//		v.PrintArr(v);
 		v.Resize(old_size + 2);
-		//		v.PrintArr(v);
-		
 		assert(v[3] == 0);
 	}
 	
@@ -409,9 +399,7 @@ inline void Test2() {
 	{
 		SimpleVector<int> v{1, 29, 3, 22};
 		v.Insert(v.begin() + 2, 42);
-		//		v.PrintArr(v);
 		assert((v == SimpleVector<int>{1, 29, 42, 3, 22}));
-		
 		v.Insert(v.begin(), 111);
 		assert((v == SimpleVector<int>{111, 1, 29, 42, 3, 22}));
 		v.Insert(v.begin() + 3, 222);
@@ -441,34 +429,27 @@ void TestReserveMethod() {
 	using namespace std;
 	cout << "TestReserveMethod"s << endl;
 	SimpleVector<int> v;
-	//	v.PrintArr(v);
 	// зарезервируем 5 мест в векторе
 	v.Reserve(5);
-	//	v.PrintArr(v);
 	assert(v.GetCapacity() == 5);
 	assert(v.IsEmpty());
-	
 	// попытаемся уменьшить capacity до 1
 	v.Reserve(1);
-	//	v.PrintArr(v);
 	// capacity должно остаться прежним
 	assert(v.GetCapacity() == 5);
 	// поместим 10 элементов в вектор
 	for (int i = 0; i < 10; ++i) {
 		v.PushBack(i);
-		//		v.PrintArr(v);
 	}
-	//	v.PrintArr(v);
+	
 	assert(v.GetSize() == 10);
 	// увеличим capacity до 100
 	v.Reserve(100);
-	//	v.PrintArr(v);
 	// проверим, что размер не поменялся
 	assert(v.GetSize() == 10);
 	assert(v.GetCapacity() == 100);
 	// проверим, что элементы на месте
 	for (int i = 0; i < 10; ++i) {
-		//		cout << v[i] << endl;
 		assert(v[i] == i);
 	}
 	cout << "Done!"s << endl;

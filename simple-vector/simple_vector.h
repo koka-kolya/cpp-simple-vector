@@ -100,7 +100,7 @@ public:
 	}
 	
 	void Reserve(size_t new_capacity) {
-		if (new_capacity > capacity_) { // если new_capacity меньше текущего, ничего не делаем
+		if (new_capacity > capacity_) { // если new_capacity меньше текущего, ничего не делает
 			ArrayPtr<Type> new_arr(new_capacity);
 			std::move(begin(), end(), new_arr.Get());
 			arr_.swap(new_arr);
@@ -111,13 +111,13 @@ public:
 	// Добавляет элемент в конец вектора
 	// При нехватке места увеличивает вдвое вместимость вектора
 	void PushBack(const Type& item) {
-		PrepareArrToPushBack();
-		arr_[size_ - 1] = item;
+		Iterator it = MakeIterToPushBack();
+		*it = item;
 	}
 	
 	void PushBack(Type&& item) {
-		PrepareArrToPushBack();
-		arr_[size_ - 1] = std::move(item);
+		Iterator it = MakeIterToPushBack();
+		*it = std::move(item);
 	}
 	
 	// Вставляет значение value в позицию pos.
@@ -211,21 +211,17 @@ public:
 
     // Изменяет размер массива.
     // При увеличении размера новые элементы получают значение по умолчанию для типа Type
-	
 	void Resize(size_t new_size)
 	{
-		if (new_size < size_) {
+		if (new_size <= size_) {
 			size_ = new_size;
 			return;
-		} else if (new_size == size_) {
-			return;
-		}  else if (new_size > capacity_) {
+		} else if (new_size > capacity_) {
 			Reserve(new_size);
-			size_ = new_size;
 		} else {
 			std::generate(begin() + size_, end() + new_size, []() {return Type{}; });
-//			std::fill(begin() + size_, end() + new_size, Type());
 		}
+		size_ = new_size;
 	}
 
     // Возвращает итератор на начало массива
@@ -268,7 +264,7 @@ private:
 	size_t size_ = 0;
 	size_t capacity_ = 0;
 	
-	size_t NewCapacity (const size_t& new_size) const {
+	size_t GetNewCapacity (const size_t& new_size) const {
 		size_t new_capacity = capacity_ != 0 ? new_size > capacity_ ? new_size * 2 : capacity_ : 1;
 		return new_capacity;
 	}
@@ -277,21 +273,23 @@ private:
 		return new_size > capacity_;
 	}
 	
-	void PrepareArrToPushBack() {
+	Iterator MakeIterToPushBack() {
 		size_t new_size = size_ + 1;
-		size_t new_capacity = NewCapacity(new_size);
+		size_t new_capacity = GetNewCapacity(new_size);
 		if (IsNotAvailableCapacity(new_size)) {
 			Reserve(new_capacity);
 		}
 		size_ = new_size;
 		capacity_ = new_capacity;
+		size_t current_pos = size_ - 1;
+		return Iterator { arr_.Get() + current_pos };
 	}
 	
 	template<typename Iter>
 	Iterator MakeIterToInsert(Iter pos) {
 		Iterator it = Iterator(pos);
 		auto current_pos = it - begin();
-		size_t new_capacity = NewCapacity(size_ + 1);
+		size_t new_capacity = GetNewCapacity(size_ + 1);
 		if (IsNotAvailableCapacity(size_ + 1)) {
 			Reserve(new_capacity);
 		}
@@ -335,7 +333,7 @@ inline bool operator<=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& 
 
 template <typename Type>
 inline bool operator>(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-	return !(lhs < rhs) && lhs != rhs;
+	return rhs < lhs;
 }
 
 template <typename Type>

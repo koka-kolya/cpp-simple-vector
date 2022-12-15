@@ -218,6 +218,7 @@ public:
 			return;
 		} else if (new_size > capacity_) {
 			Reserve(new_size);
+			std::generate(begin() + size_, end(), []() {return Type{}; });
 		} else {
 			std::generate(begin() + size_, end() + new_size, []() {return Type{}; });
 		}

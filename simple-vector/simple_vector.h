@@ -29,6 +29,7 @@ ReserveProxyObj Reserve(size_t capacity_to_reserve) {
 template <typename Type>
 class SimpleVector {
 public:
+	
     using Iterator = Type*;
     using ConstIterator = const Type*;
 	
@@ -42,23 +43,27 @@ public:
     // Создаёт вектор из size элементов, инициализированных значением по умолчанию
     explicit SimpleVector(size_t size) 
 	: 
-	arr(size),
+	arr_(size),
 	size_(size),
-	capacity_(size)	
+	capacity_(size)
 	{
+		std::generate(begin(), end(), [] () {return Type();});
     }
 	
     // Создаёт вектор из size элементов, инициализированных значением value
     SimpleVector(size_t size, const Type& value)
-	: SimpleVector(size) {
+	: SimpleVector(size) 
+	{
 		std::fill(begin(), end(), value);
     }
 	
     // Создаёт вектор из std::initializer_list
     SimpleVector(std::initializer_list<Type> init) 
-	: SimpleVector(init.size()) {
+	: arr_(init.size()),
+	size_(init.size()),
+	capacity_(init.size())
+	{
 		std::move(init.begin(), init.end(), begin());
-		//old in work only
     }
 	
 	//Конструктор копирования
@@ -71,7 +76,7 @@ public:
 	}
 	//move-constructor для некопируемых
 	SimpleVector(SimpleVector&& rhs) 
-	: arr(std::move(rhs.arr)),
+	: arr_(std::exchange(rhs.arr_, {})),
 	size_(std::exchange(rhs.size_, 0)),
 	capacity_(std::exchange(rhs.capacity_, 0))
 	{
@@ -95,35 +100,24 @@ public:
 	}
 	
 	void Reserve(size_t new_capacity) {
-		if (new_capacity > capacity_) { // игнор, если new_capacity меньше существущего
-			size_t old_size = size_;
-			SimpleVector new_arr(new_capacity);
-			std::copy(begin(), end(), new_arr.begin());
-			new_arr.size_ = old_size;
-			swap(new_arr);
+		if (new_capacity > capacity_) { // если new_capacity меньше текущего, ничего не делаем
+			ArrayPtr<Type> new_arr(new_capacity);
+			std::move(begin(), end(), new_arr.Get());
+			arr_.swap(new_arr);
+			capacity_ = new_capacity;
 		}
 	}
 
 	// Добавляет элемент в конец вектора
 	// При нехватке места увеличивает вдвое вместимость вектора
 	void PushBack(const Type& item) {
-		size_t old_capacity_ = capacity_;
-		SimpleVector new_arr(size_ + 1);
-		std::copy(begin(), end(), new_arr.begin());
-		new_arr[size_] = item; // copy для констант
-		new_arr.capacity_ = new_arr.size_ < capacity_ ? old_capacity_ : new_arr.capacity_;
-//		if (new_arr.size_ < capacity_) new_arr.capacity_ = old_capacity_;
-		swap(new_arr);
+		PrepareArrToPushBack();
+		arr_[size_ - 1] = item;
 	}
 	
 	void PushBack(Type&& item) {
-		size_t old_capacity_ = capacity_;
-		SimpleVector new_arr(size_ + 1);
-		std::move(begin(), end(), new_arr.begin());
-		new_arr[size_] = std::move(item); // move для некопируемых элементов
-		new_arr.capacity_ = new_arr.size_ < capacity_ ? old_capacity_ : new_arr.capacity_;
-//		if (new_arr.size_ < capacity_) new_arr.capacity_ = old_capacity_;
-		swap(new_arr);
+		PrepareArrToPushBack();
+		arr_[size_ - 1] = std::move(item);
 	}
 	
 	// Вставляет значение value в позицию pos.
@@ -131,32 +125,14 @@ public:
 	// Если перед вставкой значения вектор был заполнен полностью,
 	// вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
 	Iterator Insert(ConstIterator pos, const Type& value) {
-		size_t old_size = size_;
-		Iterator it = Iterator(pos);
-		auto current_pos = it - begin();
-		size_t new_capacity = size_ == capacity_ ? capacity_ == 0 ? 1 : capacity_ * 2: capacity_;
-		SimpleVector new_arr(new_capacity);
-		new_arr.size_ = old_size + 1;
-		std::copy(begin(), it, new_arr.begin());
-		new_arr[current_pos] = value; // copy для констант
-		std::copy_backward(it, end(), new_arr.end());
-		swap(new_arr);
-		it = begin() + current_pos;
+		Iterator it = PreparedIterToInsert(pos);
+		*it = value;
 		return it;
 	}
 	
 	Iterator Insert(ConstIterator pos, Type&& value) {
-		size_t old_size = size_;
-		Iterator it = Iterator(pos);
-		auto current_pos = it - begin();
-		size_t new_capacity = size_ == capacity_ ? capacity_ == 0 ? 1 : capacity_ * 2: capacity_;
-		SimpleVector new_arr(new_capacity);
-		new_arr.size_ = old_size + 1;
-		std::move(begin(), it, new_arr.begin());
-		new_arr[current_pos] = std::move(value); // move для некопируемых
-		std::move_backward(it, end(), new_arr.end());
-		swap(new_arr);
-		it = begin() + current_pos;
+		Iterator it = MakeIterToInsert(pos);
+		*it = std::move(value);
 		return it;
 	}
 	
@@ -168,30 +144,17 @@ public:
 	
 	// Удаляет элемент вектора в указанной позиции. copy-метод для конст
 	Iterator Erase(ConstIterator pos) {
-		Iterator it = Iterator(pos);
-		auto current_pos = begin() + std::distance(begin(), it);
-		if (size_ > 0) {
-			std::copy(it + 1, end(), current_pos);
-			--size_;
-//			PrintArr(*this);
-		}
-		return begin() + std::distance(begin(), it);
+		return MakeIterForErase(pos);
 	}
 	
 	// Удаляет элемент вектора в указанной позиции. move-метод для неконст
 	Iterator Erase(Iterator pos) {
-		Iterator it = Iterator(pos);
-		auto current_pos = begin() + std::distance(begin(), it);
-		if (size_ > 0) {
-			std::move(it + 1, end(), current_pos);
-			--size_;
-		}
-		return begin() + std::distance(begin(), it);
+		return MakeIterForErase(pos);
 	}
 		
 	// Обменивает значение с другим вектором
 	void swap(SimpleVector& other) noexcept {
-		arr.swap(other.arr);
+		arr_.swap(other.arr_);
 		std::swap(size_, other.size_);
 		std::swap(capacity_, other.capacity_);
 	}
@@ -214,13 +177,13 @@ public:
     // Возвращает ссылку на элемент с индексом index
 	Type& operator[](size_t index) noexcept {
 		assert(index <= size_); 
-		return arr[index];
+		return arr_[index];
     }
 
     // Возвращает константную ссылку на элемент с индексом index
     const Type& operator[](size_t index) const noexcept {
 		assert(index <= size_);
-		return arr[index];
+		return arr_[index];
     }
 
     // Возвращает константную ссылку на элемент с индексом index
@@ -229,7 +192,7 @@ public:
 		if (index >= size_) {
 			throw std::out_of_range("Index is out of range");
 		}
-		return arr[index];
+		return arr_[index];
     }
 
     // Возвращает константную ссылку на элемент с индексом index
@@ -238,75 +201,121 @@ public:
 		if (index >= size_) {
 			throw std::out_of_range("Index is out of range");
 		}
-		return arr[index];
+		return arr_[index];
     }
 
     // Обнуляет размер массива, не изменяя его вместимость
     void Clear() noexcept {
-		size_t old_capacity = capacity_;
-		ArrayPtr<Type> tmp; 
-		arr.swap(tmp);
-		capacity_ = old_capacity;
 		size_ = 0;
     }
 
     // Изменяет размер массива.
     // При увеличении размера новые элементы получают значение по умолчанию для типа Type
-    void Resize(size_t new_size) {
+	
+	void Resize(size_t new_size)
+	{
 		if (new_size < size_) {
 			size_ = new_size;
 			return;
+		} else if (new_size == size_) {
+			return;
+		}  else if (new_size > capacity_) {
+			Reserve(new_size);
+			size_ = new_size;
+		} else {
+			std::generate(begin() + size_, end() + new_size, []() {return Type{}; });
+//			std::fill(begin() + size_, end() + new_size, Type());
 		}
-		SimpleVector new_arr(new_size);
-		std::move(begin(), end(), new_arr.begin());
-		swap(new_arr);
-		//old in work only
-    }
-	
+	}
+
     // Возвращает итератор на начало массива
     // Для пустого массива может быть равен (или не равен) nullptr
     Iterator begin() noexcept {
-		return arr.Get();
+		return arr_.Get();
     }
 
     // Возвращает итератор на элемент, следующий за последним
     // Для пустого массива может быть равен (или не равен) nullptr
     Iterator end() noexcept {
-		return arr.Get() + size_;
+		return arr_.Get() + size_;
     }
 
     // Возвращает константный итератор на начало массива
     // Для пустого массива может быть равен (или не равен) nullptr
     ConstIterator begin() const noexcept {
-		return arr.Get();
+		return arr_.Get();
     }
 
     // Возвращает итератор на элемент, следующий за последним
     // Для пустого массива может быть равен (или не равен) nullptr
     ConstIterator end() const noexcept {
-		return arr.Get() + size_;
+		return arr_.Get() + size_;
     }
 
     // Возвращает константный итератор на начало массива
     // Для пустого массива может быть равен (или не равен) nullptr
     ConstIterator cbegin() const noexcept {
-		return arr.Get();
+		return arr_.Get();
     }
 
     // Возвращает итератор на элемент, следующий за последним
     // Для пустого массива может быть равен (или не равен) nullptr
     ConstIterator cend() const noexcept {
-		return arr.Get() + size_;
+		return arr_.Get() + size_;
     }
 private:
-	ArrayPtr<Type> arr {};
+	ArrayPtr<Type> arr_ {};
 	size_t size_ = 0;
 	size_t capacity_ = 0;
+	
+	size_t NewCapacity (const size_t& new_size) const {
+		size_t new_capacity = capacity_ != 0 ? new_size > capacity_ ? new_size * 2 : capacity_ : 1;
+		return new_capacity;
+	}
+	
+	bool IsNotAvailableCapacity (const size_t& new_size) const {
+		return new_size > capacity_;
+	}
+	
+	void PrepareArrToPushBack() {
+		size_t new_size = size_ + 1;
+		size_t new_capacity = NewCapacity(new_size);
+		if (IsNotAvailableCapacity(new_size)) {
+			Reserve(new_capacity);
+		}
+		size_ = new_size;
+		capacity_ = new_capacity;
+	}
+	
+	template<typename Iter>
+	Iterator MakeIterToInsert(Iter pos) {
+		Iterator it = Iterator(pos);
+		auto current_pos = it - begin();
+		size_t new_capacity = NewCapacity(size_ + 1);
+		if (IsNotAvailableCapacity(size_ + 1)) {
+			Reserve(new_capacity);
+		}
+		++size_;
+		it = begin() + current_pos;
+		std::move_backward(it, end(), end() + 1);
+		return it;
+	}
+	
+	template <typename Iter>
+	Iterator MakeIterForErase(Iter pos) {
+		Iterator it = Iterator(pos);
+		auto current_pos = begin() + std::distance(begin(), it);
+		if (size_ > 0) {
+			std::move(it + 1, end(), current_pos);
+			--size_;
+		}
+		return begin() + std::distance(begin(), it);
+	}
 };
 
 template <typename Type>
 inline bool operator==(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-	return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()) && lhs.GetSize() == rhs.GetSize();
+	return (lhs.GetSize() == rhs.GetSize()) && std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template <typename Type>
@@ -321,7 +330,7 @@ inline bool operator<(const SimpleVector<Type>& lhs, const SimpleVector<Type>& r
 
 template <typename Type>
 inline bool operator<=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-	return (lhs < rhs) || (lhs == rhs);
+	return !(lhs > rhs);
 }
 
 template <typename Type>
@@ -331,5 +340,5 @@ inline bool operator>(const SimpleVector<Type>& lhs, const SimpleVector<Type>& r
 
 template <typename Type>
 inline bool operator>=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-	return (lhs > rhs) || (lhs == rhs);
+	return !(lhs < rhs);
 } 

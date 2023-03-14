@@ -63,7 +63,7 @@ void TestNamedMoveConstructor() {
 	SimpleVector<int> vector_to_move(GenerateVector(size));
 	assert(vector_to_move.GetSize() == size);
 	
-	SimpleVector<int> moved_vector(move(vector_to_move));
+	SimpleVector<int> moved_vector(std::move(vector_to_move));
 	assert(moved_vector.GetSize() == size);
 	assert(vector_to_move.GetSize() == 0);
 	cout << "Done!" << endl << endl;
@@ -75,7 +75,7 @@ void TestNamedMoveOperator() {
 	SimpleVector<int> vector_to_move(GenerateVector(size));
 	assert(vector_to_move.GetSize() == size);
 	
-	SimpleVector<int> moved_vector = move(vector_to_move);
+	SimpleVector<int> moved_vector = std::move(vector_to_move);
 	assert(moved_vector.GetSize() == size);
 	assert(vector_to_move.GetSize() == 0);
 	cout << "Done!" << endl << endl;
@@ -89,14 +89,14 @@ void TestNoncopiableMoveConstructor() {
 		vector_to_move.PushBack(X(i));
 	}
 	
-	SimpleVector<X> moved_vector = move(vector_to_move);
+	SimpleVector<X> moved_vector = std::move(vector_to_move);
 	assert(moved_vector.GetSize() == size);
 	assert(vector_to_move.GetSize() == 0);
 	
 	for (size_t i = 0; i < size; ++i) {
 		assert(moved_vector[i].GetX() == i);
 	}
-	cout << "Done!" << endl;
+	cout << "Done!" << endl << endl;
 }
 
 void TestNoncopiablePushBack() {
@@ -112,7 +112,7 @@ void TestNoncopiablePushBack() {
 	for (size_t i = 0; i < size; ++i) {
 		assert(v[i].GetX() == i);
 	}
-	cout << "Done!" << endl;
+	cout << "Done!" << endl << endl;
 }
 
 void TestNoncopiableInsert() {
@@ -169,7 +169,7 @@ void TestResize() {
 	assert(v2.GetCapacity() >= v2.GetSize());
 	assert(std::all_of(v.begin() + 3, v.end(), [] (const X& item) {return item.GetX() == 5;}));
 	
-	cout << "Done!" << endl;
+	cout << "Done!" << endl << endl;
 }
 
 void TestDeleteObj() {
@@ -179,7 +179,7 @@ void TestDeleteObj() {
 	assert(v.GetSize() == 0);
 	assert(v.GetCapacity() == 0);
 	assert(v.IsEmpty());
-	cout << "Done!" << endl;
+	cout << "Done!" << endl << endl;
 }
 
 void TestDefaultConstructor() {
@@ -189,7 +189,7 @@ void TestDefaultConstructor() {
 	
 	SimpleVector<X> vx(3);
 	assert(std::all_of(vx.begin(), vx.end(), [] (const X& item) {return item.GetX() == 5;}));
-	cout << "Done!" << endl;
+	cout << "Done!" << endl << endl;
 }
 
 // Previous tests
@@ -422,7 +422,7 @@ void TestReserveConstructor() {
 	SimpleVector<int> v(Reserve(5));
 	assert(v.GetCapacity() == 5);
 	assert(v.IsEmpty());
-	cout << "Done!"s << endl;
+	cout << "Done!"s << endl << endl;
 }
 
 void TestReserveMethod() {
@@ -452,27 +452,35 @@ void TestReserveMethod() {
 	for (int i = 0; i < 10; ++i) {
 		assert(v[i] == i);
 	}
-	cout << "Done!"s << endl;
+	cout << "Done!"s << endl << endl;
 }
 
-int main() {
-    Test1();
+void AllTests() {
+
+	TestDefaultConstructor();
+
+	Test1();
 	Test2();
+
 	TestReserveConstructor();
 	TestReserveMethod();
-	
+
 	TestTemporaryObjConstructor();
 	TestTemporaryObjOperator();
+
 	TestNamedMoveConstructor();
 	TestNamedMoveOperator();
+
 	TestNoncopiableMoveConstructor();
 	TestNoncopiablePushBack();
 	TestNoncopiableInsert();
 	TestNoncopiableErase();
-	
+
 	TestResize();
 	TestDeleteObj();
-	TestDefaultConstructor();
-	
+}
+
+int main() {
+	AllTests();
     return 0;
 }

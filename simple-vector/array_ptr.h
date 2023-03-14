@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <utility>
 
 template <typename Type>
 class ArrayPtr {
@@ -11,24 +12,21 @@ public:
 	ArrayPtr() = default;
 	
 	// Создаёт в куче массив из size элементов типа Type.
-	// Если size == 0, поле raw_ptr_ должно быть равно nullptr
+	// Если size == 0, поле raw_ptr_ равно nullptr
 	explicit ArrayPtr(size_t size)
-	: raw_ptr_(size ? new Type[size]{ Type{} } : nullptr)
-	{
+	: raw_ptr_(size ? new Type[size]{ Type{} } : nullptr) {
 	}
 	
 	// Конструктор из сырого указателя, хранящего адрес массива в куче либо nullptr
 	explicit ArrayPtr(Type* raw_ptr) noexcept 
-	: raw_ptr_(raw_ptr)
-	{
+	: raw_ptr_(raw_ptr) {
 	}
 	
 	// Запрещаем копирование
 	ArrayPtr(const ArrayPtr&) = delete;
 	// Разрешаем перемещение
 	ArrayPtr(ArrayPtr&& rhs)
-	: raw_ptr_(std::exchange(rhs.raw_ptr_, nullptr))
-	{
+	: raw_ptr_(std::exchange(rhs.raw_ptr_, nullptr)) {
 	}
 		
 	~ArrayPtr() {
@@ -39,8 +37,7 @@ public:
 	// Запрещаем присваивание
 	ArrayPtr& operator=(const ArrayPtr&) = delete;
 	// move-присваивание 
-	ArrayPtr& operator=(ArrayPtr&& rhs) noexcept
-	{
+	ArrayPtr& operator=(ArrayPtr&& rhs) noexcept {
 		if (this != &rhs) {
 			swap(rhs);
 		}

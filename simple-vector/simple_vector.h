@@ -11,13 +11,12 @@ public:
 	ReserveProxyObj() noexcept = default;
 	
 	ReserveProxyObj(size_t capacity_to_reserve) 
-	: capacity_to_reserve_(capacity_to_reserve)
-	{
+	: capacity_to_reserve_(capacity_to_reserve) {
 	}
 	
 	size_t GetCapacity() const noexcept {
 		return capacity_to_reserve_;
-	} 
+	}
 private:
 	size_t capacity_to_reserve_ = 0;
 };
@@ -41,28 +40,24 @@ public:
 	}
 	
     // Создаёт вектор из size элементов, инициализированных значением по умолчанию
-    explicit SimpleVector(size_t size) 
-	: 
-	arr_(size),
-	size_(size),
-	capacity_(size)
-	{
-		std::generate(begin(), end(), [] () {return Type();});
+	explicit SimpleVector(size_t size)
+		: arr_(size)
+		, size_(size)
+		, capacity_(size) {
+		std::generate(begin(), end(), [] () { return Type(); });
     }
 	
     // Создаёт вектор из size элементов, инициализированных значением value
-    SimpleVector(size_t size, const Type& value)
-	: SimpleVector(size) 
-	{
+	SimpleVector(size_t size, const Type& value)
+		: SimpleVector(size) {
 		std::fill(begin(), end(), value);
     }
 	
     // Создаёт вектор из std::initializer_list
-    SimpleVector(std::initializer_list<Type> init) 
-	: arr_(init.size()),
-	size_(init.size()),
-	capacity_(init.size())
-	{
+	SimpleVector(std::initializer_list<Type> init)
+		: arr_(init.size())
+		, size_(init.size())
+		, capacity_(init.size()) {
 		std::move(init.begin(), init.end(), begin());
     }
 	
@@ -75,11 +70,10 @@ public:
 		}
 	}
 	//move-constructor для некопируемых
-	SimpleVector(SimpleVector&& rhs) 
-	: arr_(std::exchange(rhs.arr_, {})),
-	size_(std::exchange(rhs.size_, 0)),
-	capacity_(std::exchange(rhs.capacity_, 0))
-	{
+	SimpleVector(SimpleVector&& rhs)
+		: arr_(std::exchange(rhs.arr_, {}))
+		, size_(std::exchange(rhs.size_, 0))
+		, capacity_(std::exchange(rhs.capacity_, 0)) {
 	}
 	
 	//Оператор присваивания
@@ -90,6 +84,7 @@ public:
 		}
 		return *this;
 	}
+
 	// move- operator=
 	SimpleVector& operator=(SimpleVector&& rhs) {
 		if (this != &rhs) {
@@ -100,7 +95,7 @@ public:
 	}
 	
 	void Reserve(size_t new_capacity) {
-		if (new_capacity > capacity_) { // если new_capacity меньше текущего, ничего не делает
+		if (capacity_ < new_capacity) {
 			ArrayPtr<Type> new_arr(new_capacity);
 			std::move(begin(), end(), new_arr.Get());
 			arr_.swap(new_arr);
@@ -123,7 +118,7 @@ public:
 	// Вставляет значение value в позицию pos.
 	// Возвращает итератор на вставленное значение
 	// Если перед вставкой значения вектор был заполнен полностью,
-	// вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
+	// вместимость вектора увеличивается вдвое, а для вектора вместимостью 0 становится равной 1
 	Iterator Insert(ConstIterator pos, const Type& value) {
 		Iterator it = PreparedIterToInsert(pos);
 		*it = value;
@@ -266,7 +261,8 @@ private:
 	size_t capacity_ = 0;
 	
 	size_t GetNewCapacity (const size_t& new_size) const {
-		size_t new_capacity = capacity_ != 0 ? new_size > capacity_ ? new_size * 2 : capacity_ : 1;
+		size_t new_capacity = capacity_ != 0
+				? new_size > capacity_ ? new_size * 2 : capacity_ : 1;
 		return new_capacity;
 	}
 	
@@ -314,7 +310,8 @@ private:
 
 template <typename Type>
 inline bool operator==(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-	return (lhs.GetSize() == rhs.GetSize()) && std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+	return (lhs.GetSize() == rhs.GetSize())
+			&& std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template <typename Type>
@@ -324,12 +321,17 @@ inline bool operator!=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& 
 
 template <typename Type>
 inline bool operator<(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-	return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), [](const auto& lhs, const auto& rhs){return lhs < rhs;});
+	return std::lexicographical_compare(
+				lhs.begin(), lhs.end(),
+				rhs.begin(), rhs.end(),
+				[](const auto& lhs, const auto& rhs) {
+					return lhs < rhs;
+				});
 }
 
 template <typename Type>
 inline bool operator<=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-	return !(lhs > rhs);
+	return !(rhs < lhs);
 }
 
 template <typename Type>
